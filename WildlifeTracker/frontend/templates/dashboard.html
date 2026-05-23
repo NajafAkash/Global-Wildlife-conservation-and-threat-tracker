@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wildlife Conservation & Threat Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">🦁</div>
+    <div class="logo-text">Wildlife Tracker<span>Conservation System</span></div>
+  </div>
+  <div class="sidebar-section">Main</div>
+  <a class="nav-item active" onclick="showPage('dashboard',this)"><i class="fa-solid fa-gauge-high"></i> Dashboard</a>
+  <a class="nav-item" onclick="showPage('species',this)"><i class="fa-solid fa-paw"></i> Species</a>
+  <a class="nav-item" onclick="showPage('threats',this)"><i class="fa-solid fa-triangle-exclamation"></i> Threats <span class="nbadge">3</span></a>
+  <a class="nav-item" onclick="showPage('locations',this)"><i class="fa-solid fa-map-location-dot"></i> Locations</a>
+  <a class="nav-item" onclick="showPage('reports',this)"><i class="fa-solid fa-file-lines"></i> Reports</a>
+  <div class="sidebar-section">Management</div>
+  <a class="nav-item" onclick="showPage('plans',this)"><i class="fa-solid fa-shield-halved"></i> Prevention Plans</a>
+  <a class="nav-item" onclick="showPage('orgs',this)"><i class="fa-solid fa-building"></i> Organizations</a>
+  <a class="nav-item" onclick="showPage('analytics',this)"><i class="fa-solid fa-chart-line"></i> Analytics</a>
+  <div class="sidebar-section">Admin</div>
+  <a class="nav-item" onclick="showPage('users',this)"><i class="fa-solid fa-users"></i> Users</a>
+  <a class="nav-item" onclick="showPage('settings',this)"><i class="fa-solid fa-gear"></i> Settings</a>
+  <div class="sidebar-bottom">
+    <div class="user-pill">
+      <div class="user-avatar" id="sidebarAvatar">AD</div>
+      <div class="user-info"><div class="user-name" id="sidebarName">Admin</div><div class="user-email" id="sidebarEmail">admin@wildlife.org</div></div>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="topbar">
+    <button class="hamburger" onclick="document.getElementById('sidebar').classList.toggle('show')"><i class="fa-solid fa-bars"></i></button>
+    <div class="topbar-title" id="page-title">Dashboard <span>Overview</span></div>
+    <div class="search-bar">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input type="text" placeholder="Search species, threats…" id="globalSearch" onkeyup="globalSearchFn()">
+    </div>
+    <div class="topbar-actions">
+      <div class="icon-btn" onclick="toggleTheme()"><i class="fa-solid fa-moon" id="theme-icon"></i></div>
+      <div class="icon-btn"><i class="fa-solid fa-bell"></i><div class="dot"></div></div>
+      <div class="avatar" id="topAvatar" title="Logout" onclick="logout()">AD</div>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- TOAST -->
+    <div id="toast" class="toast"></div>
+
+    <!-- ── DASHBOARD ── -->
+    <div class="page active" id="pg-dashboard">
+      <div class="stats-grid">
+        <div class="stat-card" style="--ca:var(--accent)"><div class="label">Total Species</div><div class="value" id="st-total">—</div><div class="sub up" id="st-total-sub"><i class="fa-solid fa-arrow-up"></i> Loading…</div><div class="sicon"><i class="fa-solid fa-paw"></i></div></div>
+        <div class="stat-card" style="--ca:var(--red)"><div class="label">At Risk</div><div class="value" id="st-risk" style="color:var(--red)">—</div><div class="sub down" id="st-risk-sub"><i class="fa-solid fa-arrow-up"></i> Critical species</div><div class="sicon" style="background:rgba(248,113,113,.1);color:var(--red)"><i class="fa-solid fa-skull"></i></div></div>
+        <div class="stat-card" style="--ca:var(--amber)"><div class="label">Active Threats</div><div class="value" id="st-threats" style="color:var(--amber)">—</div><div class="sub" style="color:var(--amber)"><span class="live-dot"></span> Live monitoring</div><div class="sicon" style="background:rgba(251,191,36,.1);color:var(--amber)"><i class="fa-solid fa-triangle-exclamation"></i></div></div>
+        <div class="stat-card" style="--ca:var(--blue)"><div class="label">Locations</div><div class="value" id="st-locs" style="color:var(--blue)">—</div><div class="sub up"><i class="fa-solid fa-arrow-up"></i> Protected zones</div><div class="sicon" style="background:rgba(96,165,250,.1);color:var(--blue)"><i class="fa-solid fa-map-location-dot"></i></div></div>
+        <div class="stat-card" style="--ca:var(--orange)"><div class="label">Active Plans</div><div class="value" id="st-plans" style="color:var(--orange)">—</div><div class="sub up"><i class="fa-solid fa-arrow-up"></i> Avg success rate</div><div class="sicon" style="background:rgba(251,146,60,.1);color:var(--orange)"><i class="fa-solid fa-shield-halved"></i></div></div>
+      </div>
+      <div class="charts-row">
+        <div class="chart-card"><div class="chart-title">Population Trend — Last 6 Months</div><div class="chart-sub">Observation counts across reported species</div><div style="position:relative;width:100%;height:220px;"><canvas id="trendChart"></canvas></div></div>
+        <div class="chart-card"><div class="chart-title">Conservation Status</div><div class="chart-sub">Species by IUCN category</div><div style="position:relative;width:100%;height:140px;"><canvas id="statusChart"></canvas></div><div class="status-legend" id="statusLegend"></div></div>
+      </div>
+      <div class="table-card">
+        <div class="table-toolbar">
+          <span class="card-title">Species Registry</span>
+          <div class="filter-pill active" onclick="filterDashTable('all',this)">All</div>
+          <div class="filter-pill" onclick="filterDashTable('CR',this)">Critical</div>
+          <div class="filter-pill" onclick="filterDashTable('EN',this)">Endangered</div>
+          <div class="filter-pill" onclick="filterDashTable('VU',this)">Vulnerable</div>
+          <div class="ml-auto"><button class="btn-primary" onclick="openSpeciesModal('add')"><i class="fa-solid fa-plus"></i> Add Species</button></div>
+        </div>
+        <div class="table-wrap"><table id="dashSpeciesTable"><thead><tr><th>Species</th><th>Status</th><th>Population</th><th>Trend</th><th>Habitat</th><th>Threats</th><th>Actions</th></tr></thead><tbody id="dashTbody"></tbody></table></div>
+      </div>
+      <div class="bottom-row">
+        <div class="chart-card" style="padding:0;overflow:hidden;">
+          <div style="padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+            <div><div class="chart-title" style="margin:0;">Top Threats</div><div class="chart-sub" style="margin:0;">By species affected</div></div>
+            <div style="position:relative;width:60px;height:60px;"><canvas id="threatPieChart"></canvas></div>
+          </div>
+          <div id="threatList"></div>
+        </div>
+        <div class="chart-card" style="padding:0;overflow:hidden;">
+          <div style="padding:18px 20px 14px;border-bottom:1px solid var(--border);"><div class="chart-title">Recent Field Reports</div><div class="chart-sub" style="margin:0;">Latest wildlife tracking submissions</div></div>
+          <div id="recentReports"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SPECIES ── -->
+    <div class="page" id="pg-species">
+      <div class="table-card">
+        <div class="table-toolbar">
+          <span class="card-title">All Species</span>
+          <div class="search-bar" style="width:220px;margin:0;"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="speciesSearch" placeholder="Search…" onkeyup="renderSpeciesTable()"></div>
+          <select id="statusFilter" onchange="renderSpeciesTable()" style="padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text2);font-size:12px;outline:none;">
+            <option value="">All Status</option>
+            <option value="CR">Critically Endangered</option>
+            <option value="EN">Endangered</option>
+            <option value="VU">Vulnerable</option>
+            <option value="NT">Near Threatened</option>
+            <option value="LC">Least Concern</option>
+          </select>
+          <div class="ml-auto"><button class="btn-primary" onclick="openSpeciesModal('add')"><i class="fa-solid fa-plus"></i> Add Species</button></div>
+        </div>
+        <div class="table-wrap"><table><thead><tr><th>Species</th><th>Status</th><th>Population</th><th>Trend</th><th>Family</th><th>Habitat</th><th>Actions</th></tr></thead><tbody id="speciesTbody"></tbody></table></div>
+        <div id="speciesPagination" class="pagination"></div>
+      </div>
+    </div>
+
+    <!-- ── THREATS ── -->
+    <div class="page" id="pg-threats">
+      <div class="charts-row" style="grid-template-columns:1fr 1fr;">
+        <div class="chart-card"><div class="chart-title">Threats by Category</div><div class="chart-sub">Species affected per threat type</div><div style="position:relative;width:100%;height:240px;"><canvas id="threatsBarChart"></canvas></div></div>
+        <div class="chart-card"><div class="chart-title">Severity Distribution</div><div class="chart-sub">Threats by severity level</div><div style="position:relative;width:100%;height:240px;"><canvas id="severityChart"></canvas></div></div>
+      </div>
+      <div class="table-card">
+        <div class="table-toolbar"><span class="card-title">Active Threats</span><div class="ml-auto"><button class="btn-primary" onclick="openThreatModal()"><i class="fa-solid fa-plus"></i> Add Threat</button></div></div>
+        <div class="table-wrap"><table><thead><tr><th>Threat</th><th>Category</th><th>Severity</th><th>Species Affected</th><th>Actions</th></tr></thead><tbody id="threatsTbody"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- ── LOCATIONS ── -->
+    <div class="page" id="pg-locations">
+      <div class="chart-card" style="margin-bottom:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div><div class="chart-title">Global Tracking Map</div><div class="chart-sub" style="margin:0;">Real-time wildlife location monitoring — OpenStreetMap</div></div>
+          <div class="search-bar" style="width:220px;margin:0;"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="locSearch" placeholder="Search region or coordinates…" onkeyup="filterLocations()"></div>
+        </div>
+        <div id="leafletMap" style="height:420px;border-radius:8px;overflow:hidden;border:1px solid var(--border);"></div>
+        <div style="display:flex;gap:16px;margin-top:12px;">
+          <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);"><div style="width:10px;height:10px;border-radius:50%;background:var(--accent);"></div> Stable / Increasing</div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);"><div style="width:10px;height:10px;border-radius:50%;background:var(--amber);"></div> Endangered Zone</div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);"><div style="width:10px;height:10px;border-radius:50%;background:var(--red);"></div> Critical Alert</div>
+        </div>
+      </div>
+      <div class="table-card">
+        <div class="table-toolbar"><span class="card-title">Location Registry</span><div class="ml-auto"><button class="btn-primary" onclick="openLocationModal()"><i class="fa-solid fa-plus"></i> Add Location</button></div></div>
+        <div class="table-wrap"><table><thead><tr><th>Name</th><th>Country</th><th>Region</th><th>Coordinates</th><th>Area (km²)</th><th>Protected</th><th>Actions</th></tr></thead><tbody id="locationsTbody"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- ── REPORTS ── -->
+    <div class="page" id="pg-reports">
+      <div class="table-card" style="overflow:hidden;">
+        <div class="table-toolbar">
+          <span class="card-title">Field Reports Archive</span>
+          <div class="filter-pill active" onclick="filterReports('all',this)">All Reports</div>
+          <div class="filter-pill" onclick="filterReports('verified',this)">Verified Only</div>
+          <div class="filter-pill" onclick="filterReports('pending',this)">Pending Validation</div>
+          <div class="ml-auto"><button class="btn-primary" onclick="openReportModal()"><i class="fa-solid fa-paper-plane"></i> Submit Report</button></div>
+        </div>
+        <div id="reportsList" style="min-height:200px;"></div>
+        <div id="reportsPagination" class="pagination"></div>
+      </div>
+    </div>
+
+    <!-- ── PREVENTION PLANS ── -->
+    <div class="page" id="pg-plans">
+      <div class="table-card">
+        <div class="table-toolbar"><span class="card-title">Prevention Plans</span><div class="ml-auto"><button class="btn-primary" onclick="openPlanModal('add')"><i class="fa-solid fa-plus"></i> New Plan</button></div></div>
+        <div class="table-wrap"><table><thead><tr><th>Title</th><th>Species</th><th>Organization</th><th>Status</th><th>Success Rate</th><th>Budget</th><th>Actions</th></tr></thead><tbody id="plansTbody"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- ── ANALYTICS ── -->
+    <div class="page" id="pg-analytics">
+      <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);">
+        <div class="stat-card" style="--ca:var(--accent)"><div class="label">Reports This Month</div><div class="value" id="an-reports">—</div></div>
+        <div class="stat-card" style="--ca:var(--blue)"><div class="label">Verified Reports</div><div class="value" id="an-verified">—</div></div>
+        <div class="stat-card" style="--ca:var(--amber)"><div class="label">Avg Success Rate</div><div class="value" id="an-success">—</div></div>
+        <div class="stat-card" style="--ca:var(--red)"><div class="label">Unplanned Species</div><div class="value" id="an-unplanned">—</div></div>
+      </div>
+      <div class="charts-row">
+        <div class="chart-card"><div class="chart-title">Conservation Plan Success Rates</div><div class="chart-sub">Prevention plan effectiveness comparison</div><div style="position:relative;width:100%;height:260px;"><canvas id="analyticsChart"></canvas></div></div>
+        <div class="chart-card"><div class="chart-title">Species by Trend</div><div class="chart-sub">Population trend distribution</div><div style="position:relative;width:100%;height:260px;"><canvas id="trendPieChart"></canvas></div></div>
+      </div>
+    </div>
+
+    <!-- ── ORGANIZATIONS ── -->
+    <div class="page" id="pg-orgs">
+      <div class="table-card">
+        <div class="table-toolbar"><span class="card-title">Partner Organizations</span><div class="ml-auto"><button class="btn-primary" onclick="openOrgModal()"><i class="fa-solid fa-plus"></i> Add Organization</button></div></div>
+        <div class="table-wrap"><table><thead><tr><th>Name</th><th>Type</th><th>Country</th><th>Website</th><th>Contact</th><th>Actions</th></tr></thead><tbody id="orgsTbody"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- ── USERS ── -->
+    <div class="page" id="pg-users">
+      <div class="table-card">
+        <div class="table-toolbar"><span class="card-title">User Management</span></div>
+        <div class="table-wrap"><table><thead><tr><th>Username</th><th>Email</th><th>Role</th><th>Organization</th><th>Last Login</th><th>Status</th></tr></thead><tbody id="usersTbody"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- ── SETTINGS ── -->
+    <div class="page" id="pg-settings">
+      <div class="chart-card" style="max-width:500px;">
+        <div class="chart-title" style="margin-bottom:20px;">System Settings</div>
+        <div class="fg" style="margin-bottom:16px;"><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:6px;">DATABASE URL</label><input style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text2);font-size:12px;font-family:'DM Mono',monospace;outline:none;" value="mysql+pymysql://root:***@localhost/WildlifeTracker" readonly></div>
+        <div class="fg" style="margin-bottom:20px;"><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:6px;">THEME</label>
+          <button class="btn-primary" onclick="toggleTheme()" style="width:auto;"><i class="fa-solid fa-moon" id="theme-icon-settings"></i> Toggle Theme</button>
+        </div>
+        <div class="fg"><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:6px;">SESSION</label>
+          <button onclick="logout()" style="padding:8px 18px;border-radius:8px;border:1px solid var(--red);background:rgba(248,113,113,.1);color:var(--red);cursor:pointer;font-size:13px;font-family:'DM Sans',sans-serif;"><i class="fa-solid fa-right-from-bracket"></i> Sign Out</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</main>
+
+<!-- ═══════════════ MODALS ═══════════════ -->
+
+<!-- SPECIES MODAL -->
+<div class="modal-overlay" id="speciesModal">
+  <div class="modal modal-lg">
+    <div class="modal-hdr">
+      <h3 id="speciesModalTitle">Add Species</h3>
+      <button class="modal-close" onclick="closeModal('speciesModal')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="modal-body">
+      <!-- VIEW body -->
+      <div id="speciesViewBody" style="display:none;"></div>
+      <!-- FORM body -->
+      <div id="speciesFormBody">
+        <input type="hidden" id="sf-id">
+        <div class="form-row">
+          <div class="form-group"><label>Common Name *</label><input id="sf-common" placeholder="e.g. Giant Panda"></div>
+          <div class="form-group"><label>Scientific Name *</label><input id="sf-sci" placeholder="e.g. Ailuropoda melanoleuca"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Family</label><input id="sf-family" placeholder="e.g. Ursidae"></div>
+          <div class="form-group"><label>Conservation Status</label>
+            <select id="sf-status">
+              <option value="1">EX — Extinct</option>
+              <option value="2">EW — Extinct in Wild</option>
+              <option value="3">CR — Critically Endangered</option>
+              <option value="4" selected>EN — Endangered</option>
+              <option value="5">VU — Vulnerable</option>
+              <option value="6">NT — Near Threatened</option>
+              <option value="7">LC — Least Concern</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Population Estimate</label><input type="number" id="sf-pop" placeholder="e.g. 1864"></div>
+          <div class="form-group"><label>Population Trend</label>
+            <select id="sf-trend">
+              <option value="decreasing">Decreasing</option>
+              <option value="stable">Stable</option>
+              <option value="increasing">Increasing</option>
+              <option value="unknown">Unknown</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Habitat</label>
+            <select id="sf-habitat">
+              <option value="">— Select Habitat —</option>
+              <option value="1">Bamboo Forests of Sichuan</option>
+              <option value="2">Central Asian Highlands</option>
+              <option value="3">Russian Far East Taiga</option>
+              <option value="4">Arctic Tundra</option>
+              <option value="5">Tropical Coral Reefs</option>
+              <option value="6">Amazon Rainforest</option>
+              <option value="7">African Savanna</option>
+              <option value="8">Himalayan Mountains</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Origin Era</label><input id="sf-era" placeholder="e.g. Pleistocene"></div>
+        </div>
+        <div class="form-group"><label>Image URL</label><input id="sf-img" placeholder="https://…"></div>
+        <div class="form-group"><label>Description</label><textarea id="sf-desc" placeholder="Brief description…"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeModal('speciesModal')">Cancel</button>
+      <button class="btn-primary" id="speciesSubmitBtn" onclick="submitSpeciesForm()"><i class="fa-solid fa-check"></i> Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- REPORT MODAL -->
+<div class="modal-overlay" id="reportModal">
+  <div class="modal">
+    <div class="modal-hdr"><h3>Submit Field Report</h3><button class="modal-close" onclick="closeModal('reportModal')"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label>Species *</label>
+          <select id="rf-species"><option value="">— Select Species —</option></select>
+        </div>
+        <div class="form-group"><label>Location</label>
+          <select id="rf-location"><option value="">— Select Location —</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Report Date *</label><input type="date" id="rf-date"></div>
+        <div class="form-group"><label>Individuals Observed</label><input type="number" id="rf-obs" placeholder="Count"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Health Status</label>
+          <select id="rf-health">
+            <option value="healthy">Healthy</option>
+            <option value="stressed">Stressed</option>
+            <option value="injured">Injured</option>
+            <option value="unknown">Unknown</option>
+          </select>
+        </div>
+        <div class="form-group"><label>&nbsp;</label><div style="height:36px;"></div></div>
+      </div>
+      <div class="form-group"><label>Field Notes *</label><textarea id="rf-notes" placeholder="Describe your observation…"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeModal('reportModal')">Cancel</button>
+      <button class="btn-primary" onclick="submitReport()"><i class="fa-solid fa-paper-plane"></i> Submit Report</button>
+    </div>
+  </div>
+</div>
+
+<!-- THREAT MODAL -->
+<div class="modal-overlay" id="threatModal">
+  <div class="modal">
+    <div class="modal-hdr"><h3 id="threatModalTitle">Add Threat</h3><button class="modal-close" onclick="closeModal('threatModal')"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <input type="hidden" id="tf-id">
+      <div class="form-group"><label>Threat Name *</label><input id="tf-name" placeholder="e.g. Illegal Poaching"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Category *</label>
+          <select id="tf-cat">
+            <option value="poaching">Poaching</option>
+            <option value="habitat_loss">Habitat Loss</option>
+            <option value="climate_change">Climate Change</option>
+            <option value="pollution">Pollution</option>
+            <option value="invasive_species">Invasive Species</option>
+            <option value="disease">Disease</option>
+            <option value="illegal_trade">Illegal Trade</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Severity</label>
+          <select id="tf-severity">
+            <option value="critical">Critical</option>
+            <option value="high">High</option>
+            <option value="moderate">Moderate</option>
+            <option value="low">Low</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group"><label>Description</label><textarea id="tf-desc" placeholder="Describe this threat…"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeModal('threatModal')">Cancel</button>
+      <button class="btn-primary" onclick="submitThreatForm()"><i class="fa-solid fa-check"></i> Save Threat</button>
+    </div>
+  </div>
+</div>
+
+<!-- PLAN MODAL -->
+<div class="modal-overlay" id="planModal">
+  <div class="modal modal-lg">
+    <div class="modal-hdr"><h3 id="planModalTitle">New Prevention Plan</h3><button class="modal-close" onclick="closeModal('planModal')"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <input type="hidden" id="pf-id">
+      <div class="form-group"><label>Plan Title *</label><input id="pf-title" placeholder="e.g. Giant Panda Recovery Program"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Species *</label><select id="pf-species"><option value="">— Select Species —</option></select></div>
+        <div class="form-group"><label>Status</label>
+          <select id="pf-status"><option value="planned">Planned</option><option value="active">Active</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Start Date</label><input type="date" id="pf-start"></div>
+        <div class="form-group"><label>End Date</label><input type="date" id="pf-end"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Budget (USD)</label><input type="number" id="pf-budget" placeholder="e.g. 500000"></div>
+        <div class="form-group"><label>Success Rate (%)</label><input type="number" id="pf-rate" placeholder="0–100" min="0" max="100"></div>
+      </div>
+      <div class="form-group"><label>Action Steps *</label><textarea id="pf-steps" placeholder="Describe the conservation action steps…" rows="4"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeModal('planModal')">Cancel</button>
+      <button class="btn-primary" onclick="submitPlanForm()"><i class="fa-solid fa-check"></i> Save Plan</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOCATION MODAL -->
+<div class="modal-overlay" id="locationModal">
+  <div class="modal">
+    <div class="modal-hdr"><h3>Add Location</h3><button class="modal-close" onclick="closeModal('locationModal')"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label>Name</label><input id="lf-name" placeholder="e.g. Wolong Nature Reserve"></div>
+        <div class="form-group"><label>Country *</label><input id="lf-country" placeholder="e.g. China"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Region</label><input id="lf-region" placeholder="e.g. Sichuan"></div>
+        <div class="form-group"><label>Area (km²)</label><input type="number" id="lf-area" placeholder="e.g. 2000"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Latitude *</label><input type="number" step="any" id="lf-lat" placeholder="e.g. 30.92"></div>
+        <div class="form-group"><label>Longitude *</label><input type="number" step="any" id="lf-lng" placeholder="e.g. 102.98"></div>
+      </div>
+      <div class="form-group"><label><input type="checkbox" id="lf-protected" style="margin-right:6px;accent-color:var(--accent)"> Protected Zone</label></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeModal('locationModal')">Cancel</button>
+      <button class="btn-primary" onclick="submitLocationForm()"><i class="fa-solid fa-check"></i> Save Location</button>
+    </div>
+  </div>
+</div>
+
+<!-- ORG MODAL -->
+<div class="modal-overlay" id="orgModal">
+  <div class="modal">
+    <div class="modal-hdr"><h3>Add Organization</h3><button class="modal-close" onclick="closeModal('orgModal')"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>Name *</label><input id="of-name" placeholder="Organization name"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Type *</label>
+          <select id="of-type"><option value="ngo">NGO</option><option value="government">Government</option><option value="research">Research</option><option value="private">Private</option></select>
+        </div>
+        <div class="form-group"><label>Country</label><input id="of-country" placeholder="e.g. Switzerland"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Website</label><input id="of-website" placeholder="https://…"></div>
+        <div class="form-group"><label>Contact Email</label><input type="email" id="of-email" placeholder="contact@org.org"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeModal('orgModal')">Cancel</button>
+      <button class="btn-primary" onclick="alert('Organizations endpoint — coming next sprint.')"><i class="fa-solid fa-check"></i> Save</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
