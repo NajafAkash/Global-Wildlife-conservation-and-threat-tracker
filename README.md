@@ -1,9 +1,5 @@
 # Global Wildlife Conservation & Threat Tracker
-## Group 12
-## Roles
-1) Najaf Akash (24p_0704) : Backend, frontend, database integration, and overall system design 
-2) Muhammad Ali (24p_0723) : Database design and modelling 
-3) Behzad Tariq (24p_0616) : seeding data and testing data 
+
 ## Project Structure
 ```
 wildlife_tracker/
